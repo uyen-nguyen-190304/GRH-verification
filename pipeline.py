@@ -36,7 +36,7 @@ def main():
     parser.add_argument("-K", "--upper-limit", dest="K", type=int, default=20, help="Upper limit for von Mangoldt and Kronecker computation")
     parser.add_argument("-eta", type=float, help="Height parameter of interest eta")
     parser.add_argument("-err", "--error-window", dest="err", type=float, default=1e-8, help="Error window for the intervals")
-    parser.add_argument("-config", "--config-file", dest="config", type=str, default="config.json", help="Path to config.json with lcalc_path")
+    parser.add_argument("-config", "--config-file", dest="config", type=str, default="example_config.json", help="Path to config.json with lcalc_path")
     args = parser.parse_args()
     
     # Retrieve command line arguments
