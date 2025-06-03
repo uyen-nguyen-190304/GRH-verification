@@ -1,3 +1,4 @@
+import os
 import math
 import argparse
 from sage.all import *     
@@ -39,6 +40,10 @@ def write_von_mangoldt(von_mangoldt_list: list, filename: str):
 
     Output: None
     """
+    dir_name = os.path.dirname(filename)
+    if dir_name and not os.path.exists(dir_name):
+        os.makedirs(dir_name, exist_ok=True)
+
     with open(filename, 'w') as f:
         for k, von_mangoldt_value in enumerate(von_mangoldt_list, start=1):
             f.write(f"{k} {von_mangoldt_value}\n")
@@ -48,7 +53,7 @@ def main():
     Pipeline to compute von Mangoldt function values from [1..n] and write them to a file
     """
     parser = argparse.ArgumentParser(description="Compute von Mangoldt function values")
-    parser.add_argument("-n", type=int, required=True, help="Upper limit for k in von Mangoldt function") 
+    parser.add_argument("-n", "--upper-limit", dest="n", type=int, required=True, help="Upper limit for k in von Mangoldt function") 
     args = parser.parse_args()
 
     # Retrieve the upper limit for k
@@ -56,7 +61,7 @@ def main():
 
     # Compute the von Mangoldt function values
     von_mangoldt_list = compute_von_mangoldt(n)
-    write_von_mangoldt(von_mangoldt_list, filename="../data/von_mangoldt.txt")
+    write_von_mangoldt(von_mangoldt_list, filename="data/von_mangoldt.txt")
 
 if __name__ == "__main__":
     main()
