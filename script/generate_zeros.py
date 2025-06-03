@@ -16,10 +16,10 @@ def compute_zeros(d: int, N: int, lcalc_path: str):
     """
     # Validate inputs
     if not isinstance(d, int) or d <= 0:
-        print("Error: Discriminant d must be a positive integer.")
+        print("Error: Discriminant d must be a positive integer")
         sys.exit(1)
     if not isinstance(N, int) or N <= 0:
-        print("Error: Number of zeros N must be a positive integer.")
+        print("Error: Number of zeros N must be a positive integer")
         sys.exit(1)
 
     # Get the path to the lcalc executable
