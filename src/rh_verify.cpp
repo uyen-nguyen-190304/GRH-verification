@@ -155,9 +155,9 @@ int main(int argc, char* argv[]) {
     int K = atoi(argv[3]);          // Number of nontrivial zeros to consider
 
     // Load the data
-    vector<pair<double, double>> intervals = load_intervals("../data/intervals.txt");
-    map<int, int> chi_d_arr = load_kronecker("../data/kronecker.txt");
-    map<int, double> lambda_arr = load_von_mangoldt("../data/von_mangoldt.txt");
+    vector<pair<double, double>> intervals = load_intervals("data/intervals.txt");
+    map<int, int> chi_d_arr = load_kronecker("data/kronecker.txt");
+    map<int, double> lambda_arr = load_von_mangoldt("data/von_mangoldt.txt");
 
     // RH inequality test
     double lhs = 2.0 * iota(eta) + C_Z(intervals);
