@@ -68,6 +68,10 @@ def write_zeros(zeros: list, filename: str):
 
     Output: None
     """
+    dir_name = os.path.dirname(filename)
+    if dir_name and not os.path.exists(dir_name):
+        os.makedirs(dir_name, exist_ok=True)
+
     with open(filename, 'w') as f:
         for zero in zeros:
             f.write(f"{zero}\n")
@@ -97,6 +101,10 @@ def write_intervals(intervals: list, filename: str):
 
     Output: None
     """
+    dir_name = os.path.dirname(filename)
+    if dir_name and not os.path.exists(dir_name):
+        os.makedirs(dir_name, exist_ok=True)
+
     with open(filename, 'w') as f:
         for gamma_minus, gamma_plus in intervals:
             f.write(f"{gamma_minus} {gamma_plus}\n")
@@ -113,7 +121,7 @@ def main():
     parser.add_argument('-d', '--discriminant', type=int, required=True, help='Discriminant of the Dirichlet L-function')
     parser.add_argument('-N', '--num-zeros', type=int, default=50, help='Number of zeros to compute (default: 50)')
     parser.add_argument('-err', '--error-window', type=float, default=1e-8, help='Error window for intervals (default: 1e-8)')
-    parser.add_argument('-config', '--config-file', type=str, default='../config.json', help='Path to config file (default: ../config.json)')
+    parser.add_argument('-config', '--config-file', type=str, default='config.json', help='Path to config file (default: config.json)')
     args = parser.parse_args()
 
     # Retrieve command line arguments
@@ -136,11 +144,11 @@ def main():
 
     # Compute the zeros of the Dirichlet L-function
     zeros = compute_zeros(d, N, lcalc_path)
-    write_zeros(zeros, filename="../data/zeros.txt")
+    write_zeros(zeros, filename="data/zeros.txt")
 
     # Compute intervals for the zeros
     intervals = compute_intervals(zeros, err)
-    write_intervals(intervals, filename="../data/intervals.txt")
+    write_intervals(intervals, filename="data/intervals.txt")
 
 if __name__ == "__main__":
     main()
