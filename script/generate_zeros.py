@@ -36,7 +36,7 @@ def compute_zeros(d: int, N: int, lcalc_path: str):
         "-z", str(N),           # Number of zeros to compute
         "--twist-quadratic",    # Twist the L-function by a quadratic character
         "--start", str(d),      # Discriminant d
-        "--end", str(d),        
+        "--finish", str(d)  
     ]
 
     # Calling the lcalc executable -> compute zeros
