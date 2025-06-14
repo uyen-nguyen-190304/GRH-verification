@@ -34,12 +34,16 @@ def write_lambda(lambda_arr: np.ndarray, K: int, data_dir: Path) -> None:
     Output: None
     """
     data_dir.mkdir(parents=True, exist_ok=True)
+
+    # Determine cache folder and ensure it exists
     cache_dir = data_dir / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
+    # Save binary .npy file
     npy_path = cache_dir / f"von_mangoldt_{K}.npy"
     np.save(npy_path, lambda_arr)
 
+    # Save readable text file
     txt_path = data_dir / "von_mangoldt.txt"
     with open(txt_path, "w") as f:
         for k in range(1, K + 1):
