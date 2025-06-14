@@ -33,3 +33,9 @@
 
 # Config file
 local_config.json
+
+# Binary caches
+data/cache/
+
+# CMake build output
+src/build/
