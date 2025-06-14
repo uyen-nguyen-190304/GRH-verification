@@ -55,12 +55,12 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Compute von Mangoldt function values")
     parser.add_argument("-K", "--upper-limit", type=int, required=True, help="Upper limit for k in von Mangoldt function")
-    parser.add_argument("-dir", "--data-dir", type=str, default="data", help="Output directory to save Λ(k) values (default: data)")
+    parser.add_argument("-data", "--data-dir", type=str, default="data", help="Output directory to save Λ(k) values (default: data)")
     args = parser.parse_args()
 
     # Retrieve command line parameters
     K = args.upper_limit
-    data_dir = args.data_dir
+    data_dir = Path(args.data_dir)
 
     # Validate input
     if K <= 0:
