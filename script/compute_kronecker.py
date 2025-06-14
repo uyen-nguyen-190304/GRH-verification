@@ -51,10 +51,10 @@ def main():
     """
     Command-line interface for computing and caching Kronecker symbols
     """
-    parser = argparse.ArgumentParser(description="Compute Kronecker symbols for integers [1..n] with respect to discriminant d")
+    parser = argparse.ArgumentParser(description="Compute Kronecker symbols for integers [1..K] with respect to discriminant d")
     parser.add_argument("-d", "--discriminant", type=int, required=True, help='Discriminant for the Kronecker symbol')
     parser.add_argument('-K', '--upper_limit', type=int, required=True, help='Upper limit for k in the Kronecker symbol')
-    parser.add_argument("-dir", "--data-dir", type=str, default="data", help="Output directory to save Kronecker symbols (default: data)")
+    parser.add_argument("-data", "--data-dir", type=str, default="data", help="Output directory to save Kronecker symbols (default: data)")
     args = parser.parse_args()
 
     # Retrieve command line parameters
@@ -69,7 +69,7 @@ def main():
 
     # Compute and write Kronecker symbols
     chi_arr = compute_kronecker(d, K)
-    write_kronecker(chi_arr, d, K, data_dir)
+    write_kronecker(d, K, chi_arr, data_dir)
 
 if __name__ == "__main__":
     main()
