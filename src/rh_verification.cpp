@@ -6,9 +6,6 @@
 
 namespace grh {
 
-// Euler-Mascheroni constant
-static const double EULER_CONSTANT = 0.57721566490153286060651209008240243;
-
 /* 
  @brief
  Compute the iota(eta) constant used in RH estimate. Return the minimum of 
@@ -75,7 +72,7 @@ double log_derivative(const std::vector<int8_t>& chi_arr,
 
     for (int k = K; k <= K; ++k) 
     {
-        const int8_t chi_k = chi[static_cast<std::size_t>(k)];
+        const int8_t chi_k = chi_arr[static_cast<std::size_t>(k)];
         if (chi_k == 0) continue;   // skip k where χ_d(k) = 0
         
         const double lambda_k = lambda_arr[static_cast<std::size_t>(k)];
@@ -88,7 +85,29 @@ double log_derivative(const std::vector<int8_t>& chi_arr,
 
 /*
  @brief
+ Return the single-zero contribution to the LHS of the RH-corollary inequality
+
+ @param: gamma_minus, gamma_plus : endpoints of the enclosing interval
+
+ @return: 6 / (9 + 4 * γ^2) if the interval is symmetric 
+          12 / (9 + 4 * γ+^2) otherwise
+ */
+double zero_contribution(double gamma_minus, double gamma_plus)
+{
+    if (std::fabs(gamma_minus + gamma_plus) < 1e-8)   
+    {
+        // Type 2: Symmetric [−γ, γ]
+        const double g = std::fabs(gamma_plus);
+        return 6.0 / (9.0 + 4.0 * g * g);
+    }
+    // Type 1: Asymmetric [γ⁻, γ⁺]
+    return 12.0 / (9.0 + 4.0 * gamma_plus * gamma_plus);
+}
+
+/*
+ @brief
  Main RH inequality verifier
+ ! One-shot functionality when all zero intervals are provided 
  
  @param: d - fundamental discriminant
          K - Upper bound for logarithmic derivative computation
@@ -139,12 +158,12 @@ bool rh_verify(long long d, int K, double eta,
         {
             // Type 2: Symmetric
             const double gamma0 = std::fabs(gamma_plus);
-            sum += 6.0 / (9.0 + 4.0 * gamma0 * gamma0);
+            lhs += 6.0 / (9.0 + 4.0 * gamma0 * gamma0);
         } 
         else 
         {
             // Type 1: Asymmetric
-            sum += 12.0 / (9.0 + 4.0 * gamma_plus * gamma_plus);
+            lhs += 12.0 / (9.0 + 4.0 * gamma_plus * gamma_plus);
         }    
 
         // If LHS > RHS, the inequality is satisfied and RH is verified
