@@ -19,8 +19,14 @@ def is_square_free(n: int) -> bool:
 
     Output: True if square-free, False otherwise
     """
+    n = abs(n)
+
+    if n in (0, 1):
+        return n == 1   # 0 -> False, 1 -> True
+    
     if n % 4 == 0:
         return False    # Quick early rejection: divisibly be 4 can't be square-free
+    
     p = 2
     while p * p <= n:
         if n % (p * p) == 0:
@@ -40,15 +46,13 @@ def is_fundamental_discriminant(d: int) -> bool:
     if d == 0:
         return False
     
-    abs_d = abs(d)
-
     # Case where d ≡ 1 mod 4: check if abs(d) is square-free 
-    if abs_d % 4 == 1:
-        return is_square_free(abs_d)
+    if d % 4 == 1:
+        return is_square_free(d)
 
     # Case where d ≡ 0 mod 4: check if d/4 is square-free and ≡ 2 or 3 mod 4
-    if abs_d % 4 == 0:
-        q = abs_d // 4
+    if d % 4 == 0:
+        q = d // 4
         return is_square_free(q) and q % 4 in (2, 3)
     return False
 
@@ -104,7 +108,6 @@ def load_kronecker(d: int, K: int, data_dir: Path) -> np.ndarray:
     # Load the numpy array
     return np.load(f)
 
-
 def verify_until_success(d: int, K: int, eps: float, eta: float, lcalc_path: str, data_dir: Path, log_path: Path, chunk: int = 20) -> Tuple[bool, int]:
     """
     Verify RH for the Dirichlet L-function associated with discriminant d
@@ -122,6 +125,9 @@ def verify_until_success(d: int, K: int, eps: float, eta: float, lcalc_path: str
     
     Output: A tupe of (success (bool), number of zeros used (int))
     """
+    # Construct the cache root
+    cache_root = str(data_dir / "cache")
+
     # Load the cached values of lambda and kronecker symbol
     lambda_arr = load_lambda(K, data_dir)
     chi_arr = load_kronecker(d, K, data_dir)
@@ -152,24 +158,50 @@ def verify_until_success(d: int, K: int, eps: float, eta: float, lcalc_path: str
         while True:
             # Load chunk number of new intervals
             need = start + chunk
-            intervals_np = cached_intervals(d, need, eps, lcalc_path, cache_root=str(data_dir))
+            intervals_np = cached_intervals(d, need, eps, lcalc_path, cache_root)
 
             if len(intervals_np) <= start:
-                return False, N_used    # No more zeros left to load
+                break
             
             intervals = intervals_np[start:]    # Only use new batch
             for gamma_minus, gamma_plus in map(tuple, intervals):
                 lhs += grhverify.zero_contribution(gamma_minus, gamma_plus)
                 N_used += 1
                 if lhs > rhs:
-                    return True, N_used     # RH verify condition
+                    raise StopIteration
             start += chunk
+        
+        # Loop exhaust without RH verified
+        success = False
+
+    except StopIteration:
+        success = True
 
     except Exception as e:
         # Log error to file if computation fails for this d
         with open(log_path, "a") as log:
             log.write(f"Error: d = {d}, N = {N_used}, reason = {repr(e)}\n")
-        return False, N_used
+        success = False
+
+    # Write zeros and intervals to .txt file
+    try: 
+        # Grab *exactly* the zeros/intervals we actually used
+        zeros_np = cached_zeros(d, N_used, lcalc_path, cache_root)
+        intervals_np  = cached_intervals(d, N_used, eps, lcalc_path, cache_root)
+
+        # Path to correct directory
+        zeros_txt = data_dir / ("positive_d" if d > 0 else "negative_d") / f"d_{d}" / f"zeros.txt"
+        intervals_txt  = data_dir / ("positive_d" if d > 0 else "negative_d") / f"d_{d}" / f"intervals.txt"
+
+        # Save the zeros and intervals used
+        np.savetxt(zeros_txt, zeros_np, fmt="%.23f")
+        np.savetxt(intervals_txt, intervals_np, fmt="%.23f")
+
+    except Exception as save_err:
+        with open(log_path, "a") as log:
+            log.write(f"Warning: d = {d}, could not save zeros.txt and intervals.txt: {repr(save_err)}\n")
+
+    return success, N_used
 
 def main():
     """
@@ -217,6 +249,7 @@ def main():
 
     # Create output directory if missing
     data_dir = Path(args.data_dir)
+    cache_root = str(data_dir / "cache")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
@@ -235,7 +268,7 @@ def main():
             eta = args.eta
             if eta is None:
                 try:
-                    zero_list = cached_zeros(d, 1, lcalc_path, data_dir)
+                    zero_list = cached_zeros(d, 1, lcalc_path, cache_root)
                     eta = zero_list[0]      # First non-trivial zero ordinate
                 except Exception as e:
                     eta = 50.0     # Fallback value
