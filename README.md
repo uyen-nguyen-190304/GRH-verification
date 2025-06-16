@@ -23,15 +23,15 @@ cd ..
 
 ## 3. Running the verification pipeline
 
-The entry point to the verification pipeline is `script/pipeline.py`. To run the verification pipeline, you have to provide either:
+The entry point to the verification pipeline is `script/pipeline.py`. To run the verification pipeline, provide either:
 
 * exactly one discriminant (`-d/--discriminant`), or
 * an inclusive range (`--d-min` and `--d-max`)
 
-The two options are mutually exclusive. If you are trying to pass both flag/flags combination, the script will abort with:
+The two options are mutually exclusive. If both options are provided at once, the script will abort with the message:
 
 ```bash
-Error: Error: Cannot provide both --discriminant and --d-min/d-max
+Error: Cannot provide both --discriminant and --d-min/d-max
 ```
 
 ### A. Single discriminant
@@ -48,16 +48,14 @@ python -m script.pipeline --d-min -1000 --d-max 1000
 
 One of the two options above must be provided. Then, for each fundamental $d$ in the set, the pipeline keeps adding zeros until the RH is verified and records the smallest number of zeros $N$ needed. Besides, there are some other optional flags that could be supplied to the pipeline if wanted:
 
-| Flag                       | Default                 | Meaning                                                                           |
-| -------------------------- | ----------------------- | --------------------------------------------------------------------------------- |
-| `-eta`                     | *first zero*            | Verification height $η$.  If omitted, the ordinate of the first zero is used |
-| `-K`, `--upper-limit`      | **$100000 = 10^5$**              | Length of the Λ(k) and χ<sub>d</sub>(k) arrays                                  |
-| `-eps`, `--epsilon`        | **$1 × 10^{-6}$**            | Half-width $ε$ of each symmetric interval $[γ-ε, γ+ε]$                         |
-| `-config`, `--config-file` | **`local_config.json`** | JSON containing `"lcalc_path": "/path/to/lcalc"`                                 |
-| `-data`, `--data-dir`      | **`data`**              | Root directory for caches (Λ, χ, zeros)                                          |
-| `-output`, `--output-dir`  | **`results`**           | Destination for `summary.csv` & `errors.log`                                     |
-
----
+| Flag                       | Default                 | Meaning                                                                            |
+| -------------------------- | ----------------------- | ---------------------------------------------------------------------------------  |
+| `-eta`                     | *first zero*            | Verification height $\eta$.  If omitted, the ordinate of the first zero is used       |
+| `-K`, `--upper-limit`      | **$100000 = 10^5$**     | Length of the $\Lambda(k)$ and $\chi_d(k)$ arrays                                     |
+| `-eps`, `--epsilon`        | **$1 × 10^{-6}$**       | Half-width $\varepsilon$ of each symmetric interval $[\gamma - \varepsilon, \gamma + \varepsilon]$                             |
+| `-config`, `--config-file` | **`local_config.json`** | JSON containing `"lcalc_path": "/path/to/lcalc"`                                   |
+| `-data`, `--data-dir`      | **`data`**              | Root directory for caches ($\Lambda$, $\chi$, zeros)                                            |
+| `-output`, `--output-dir`  | **`results`**           | Destination for `summary.csv` & `errors.log`                                       |
 
 ### Complete example
 
