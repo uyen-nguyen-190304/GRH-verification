@@ -6,7 +6,7 @@ A lightweight numerical tool-chain for verifying the Generalized Riemann Hypothe
 ## 1. Building the C++ extension
 
 ```bash
-mkdir build ** cd build
+mkdir build && cd build
 cmake ..                           # need CMake >= 3.16
 make                               # build grhverify*.so
 cd ..
