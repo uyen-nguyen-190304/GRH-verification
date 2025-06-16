@@ -28,14 +28,18 @@ def compute_zeros(d: int, N: int, lcalc_path: str):
         sys.exit(f"Error: lcalc executable not found at {lcalc_path}")
 
     # Construct lcalc command line
-    # TODO: This still doesn't work with negative discriminant
     cmd = [
         lcalc_path,
-        "-z", str(N),           # Number of zeros to compute
-        "--twist-quadratic",    # Twist the L-function by a quadratic character
-        "--start", str(d),      # Discriminant d
+        "-z", str(N),                   # Number of zeros to compute
+    ]
+    if abs(d) != 1:
+        cmd += ["--twist-quadratic"]    # Only add if d is not a primitive quadratic character 
+    cmd += [
+        "--start", str(d),              # Add discriminant d
         "--finish", str(d)
     ]
+
+
 
     # Run the command and capture output
     try:
@@ -49,11 +53,16 @@ def compute_zeros(d: int, N: int, lcalc_path: str):
     zeros = []
     for line in output.splitlines():
         line = line.strip()
-        if re.match(r'^\d+\s+[\d\.]+', line):
-            parts = line.split()
-            if len(parts) >= 2:
-                gamma = float(parts[1])     # Extract the imaginary part of the zero
-                zeros.append(gamma)
+        if not line:
+            continue
+
+        # Two-column format (d, gamma) or one-column format
+        parts = line.split()
+        try:
+            gamma = float(parts[-1])    # Last token is always the ordinate
+            zeros.append(gamma)
+        except ValueError:
+            continue        # Skip header/status lines if any
 
     return zeros
 
@@ -76,7 +85,7 @@ def fetch_zeros(d: int, start: int, count: int, lcalc_path: str) -> List[float]:
     full = compute_zeros(d, start + count, lcalc_path)
     return full[start:]         
 
-def cached_zeros(d: int, N: int, lcalc_path: str, cache_root: str="data") -> np.ndarray:
+def cached_zeros(d: int, N: int, lcalc_path: str, cache_root: str="data/cache") -> np.ndarray:
     """
     Return the first N zeros of χ_d from cache if available, otherwise compute and cache them
 
@@ -106,7 +115,7 @@ def cached_zeros(d: int, N: int, lcalc_path: str, cache_root: str="data") -> np.
     
     return zeros[:N]    
 
-def cached_intervals(d: int, N: int, eps: float, lcalc_path: str, cache_root: str="data") -> np.ndarray:
+def cached_intervals(d: int, N: int, eps: float, lcalc_path: str, cache_root: str="data/cache") -> np.ndarray:
     """
     Return an (N, 2) array of symmetric intervals [γ - eps, γ + eps] around zeros of χ_d
     Use a cache for efficiency. Recomputes if eps or N has changed 
