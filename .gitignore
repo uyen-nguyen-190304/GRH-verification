@@ -34,8 +34,13 @@
 # Config file
 local_config.json
 
-# Binary caches
-data/cache/
-
 # CMake build output
+Makefile
+build/
 src/build/
+
+# Python artefacts
+__pycache__/
+
+# Generated numeric data
+data/*
