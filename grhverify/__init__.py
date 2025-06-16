@@ -1,6 +1,6 @@
 """
 grhverify: Python bindings for verifying the Generalized Riemann Hypothesis
-using high-performance C++ numerical routines
+using C++ numerical routines
 
 Exposes:
     - EULER_CONSTANT

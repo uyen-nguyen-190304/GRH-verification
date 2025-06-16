@@ -70,7 +70,7 @@ double log_derivative(const std::vector<int8_t>& chi_arr,
 {
     double sum = 0.0;
 
-    for (int k = K; k <= K; ++k) 
+    for (int k = 1; k <= K; ++k) 
     {
         const int8_t chi_k = chi_arr[static_cast<std::size_t>(k)];
         if (chi_k == 0) continue;   // skip k where χ_d(k) = 0
