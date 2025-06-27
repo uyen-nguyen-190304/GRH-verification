@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from pathlib import Path
 from sage.all import prime_range
 
 def compute_lambda(K: int) -> np.ndarray:
@@ -20,20 +21,22 @@ def compute_lambda(K: int) -> np.ndarray:
             q *= p
     return lambda_arr
 
-def write_lambda(K: int, lambda_arr: np.ndarray, data_dir: str) -> None:
+def write_lambda(K: int, lambda_arr: np.ndarray, data_dir: str | Path) -> None:
     """
-    Save the von Mangoldt array in both .npy and .txt formats
+    Save the von Mangoldt array as a text file in the specified directory
 
     Input:  K (int): Upper bound for k in Λ(k)
             lambda_arr (np.ndarray): Array containing von Mangoldt values
-            data_dir (str): Path to data directory
+            data_dir (str | Path): Path to data directory
     
     Output: None
     """
-    data_dir.mkdir(parents=True, exist_ok=True)
+    # Ensure the storing directory exists
+    base = Path(data_dir).expanduser()
+    base.mkdir(parents=True, exist_ok=True)
 
-    # Save the text file
-    txt_path = data_dir / "von_mangoldt.txt"
+    # Save the lambda values to the von_mangoldt.txt file
+    txt_path = base / "von_mangoldt.txt"
     with open(txt_path, "w") as f:
         for k in range(1, K + 1):
             f.write(f"{k} {lambda_arr[k]}\n")

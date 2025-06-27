@@ -1,4 +1,5 @@
 import numpy as np
+from pathlib import Path
 from sage.all import kronecker_symbol
 
 def compute_kronecker(d: int, K: int) -> np.ndarray:
@@ -16,9 +17,9 @@ def compute_kronecker(d: int, K: int) -> np.ndarray:
         chi_arr[k] = kronecker_symbol(d, k)
     return chi_arr
 
-def write_kronecker(d: int, K: int, chi_arr: np.ndarray, data_dir = str) -> None:
+def write_kronecker(d: int, K: int, chi_arr: np.ndarray, data_dir = str | Path) -> None:
     """
-    Save the Kronecker symbol array in .txt format
+    Save the Kronecker symbol array as a text file in the specified directory
 
     Input:  d (int): Discriminant of Dirichlet character
             K (int): Upper bound for k
@@ -27,12 +28,12 @@ def write_kronecker(d: int, K: int, chi_arr: np.ndarray, data_dir = str) -> None
 
     Output: None
     """  
-    data_dir.mkdir(parents=True, exist_ok=True)
+    # Ensure the storing directory exists
+    target = Path(data_dir).expanduser() / ("positive_d" if d > 0 else "negative_d") / f"d_{d}"
+    target.mkdir(parents=True, exist_ok=True)
 
-    # Save the text file
-    txt_dir = data_dir / ("positive_d" if d > 0 else "negative_d") / f"d_{d}"
-    txt_dir.mkdir(parents=True, exist_ok=True)
-    txt_path = txt_dir / "kronecker.txt"
+    # Save the kronecker values to the kronecker.txt file
+    txt_path = target / "kronecker.txt"
     with open(txt_path, "w") as f:
         for k in range(1, K + 1):
             f.write(f"{k} {chi_arr[k]}\n")  
