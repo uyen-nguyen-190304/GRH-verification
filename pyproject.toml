@@ -1,0 +1,13 @@
+[project]
+name = "grhverify"
+version = "0.0.1"
+dependencies = ["numpy", "mpmath"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+# Explicit package discovery rules
+[tool.setuptools.packages.find]
+include = ["grhverify*"]          # what to keep
+exclude = ["data*", "results*"]   # what to ignore
