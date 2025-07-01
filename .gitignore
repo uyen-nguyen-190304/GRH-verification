@@ -41,6 +41,7 @@ src/build/
 
 # Python artefacts
 __pycache__/
+.pytest_cache
 
 # Generated numeric data
 data/*
