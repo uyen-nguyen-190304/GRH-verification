@@ -4,7 +4,8 @@ import argparse
 from typing import List
 from pathlib import Path
 
-from src.grhverify.base_case import base_case_verify
+from grhverify.base_case import base_case_verify
+from grhverify.utils.generate_zeros import compute_zeros
 
 # =========================== HELPER FUNCTIONS ===========================
 
@@ -83,7 +84,7 @@ def main() -> None:
     # Load the config file (lcalc path)
     config_path = Path(args.config_file).expanduser()
     try:
-        lcalc_path = Path(json.load(config_path.read_text())["lcalc_path"]).expanduser()
+        lcalc_path = Path(json.loads(config_path.read_text())["lcalc_path"]).expanduser()
     except Exception as err:
         raise RuntimeError(f"Failed to read lcalc_path from {config_path}") from err
 
@@ -98,9 +99,9 @@ def main() -> None:
     summary_path = output_dir / "summary.csv"
     new_file = not summary_path.exists()
     summary_fh = summary_path.open("a", newline="")
-    writer = csv.write(summary_fh)
+    writer = csv.writer(summary_fh)
     if new_file:
-        writer.writerow(["d", "verified", "zero_used"])
+        writer.writerow(["d", "N_needed"])
 
     # Direct the RH verification based on the power k 
     k = args.power
@@ -111,25 +112,36 @@ def main() -> None:
             if not is_fundamental_discriminant(d):
                 continue
 
+            # Compute the height eta if user not provided
+            eta: float
+            if args.height is not None:
+                eta = args.height
+            else:
+                try:
+                    eta = float(compute_zeros(d, 1, lcalc_path)[0])
+                except Exception as err:
+                    raise RuntimeError(f"Fail to compute the first zero ordinate to use at height eta for GRH verification")
+
             # Call the base case verification function
             success, N_used = base_case_verify(
                 d=d,
                 K=args.upper_limit,
-                eta=args.height,
+                eta=eta,
                 eps=args.epsilon,
                 lcalc_path=lcalc_path,
-                data_path=data_dir,
+                data_dir=data_dir,
                 log_path=log_path
             )
 
             # Log result to CSV
-            writer.writerow([d, success, N_used])
+            writer.writerow([d, N_used])
+            summary_fh.flush()
 
             # Print to console
             if success:
-                print(f"For d = {d}, {N_used} zeros are needed to verify the RH up to height eta = {args.height}")
+                print(f"For d = {d}, {N_used} zeros are needed to verify the RH up to height eta = {eta}")
             else:
-                print(f"Fail to verify the RH with discriminant d = {d} up to height eta = {args.height}")
+                print(f"Fail to verify the RH with discriminant d = {d} up to height eta = {eta}")
 
     elif (k % 2 == 0 and k >= 2): 
         # Later implementation for higher power
