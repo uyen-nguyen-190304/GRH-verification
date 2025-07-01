@@ -1,11 +1,12 @@
-import numpy as np 
-import npmath as mp
-from typing import Tuple
+from typing import Tuple, List
 from pathlib import Path
 
-from utils.generate_zeros import compute_intervals
-from utils.von_mangoldt import compute_lambda
-from utils.kronecker_symbol import compute_kronecker
+import numpy as np 
+import mpmath as mp
+
+from utils.generate_zeros import compute_zeros, compute_intervals, write_zeros, write_intervals
+from utils.von_mangoldt import compute_lambda, write_lambda
+from utils.kronecker_symbol import compute_kronecker, write_kronecker
 
 # =============================== CONSTANTS ===============================
 
@@ -18,17 +19,18 @@ E      = mp.e
 
 def iota(eta: mp.mpf) -> mp.mpf:
     """
-    Compute the iota(eta) = min(1 / (1 + eta^2) +  2 / (4 + eta^2), 12 / (9 + 4 * eta^2))
+    Return iota(eta) = min(1 / (1 + eta^2) +  2 / (4 + eta^2), 12 / (9 + 4 * eta^2))
     """
     # Compute the two expressions
-    term1 = 1.0 / (1.0 + eta * eta) + 2.0 / (4.0 + eta * eta)
-    term2 = 12.0 / (9.0 + 4.0 * eta * eta)
+    eta2 = eta * eta
+    term1 = 1.0 / (1.0 + eta2) + 2.0 / (4.0 + eta2)
+    term2 = 12.0 / (9.0 + 4.0 * eta2)
 
     # Return the minimum value of the two expressions
     return mp.fmin(term1, term2)
 
 
-def logarithmic_derivative(delta: int, K: int, chi_arr: np.ndarray, lambda_arr: np.ndarray, add_tail: bool = True) -> mp.mpf:
+def logarithmic_derivative(delta: int, K: int, chi_arr: np.ndarray, lambda_arr: np.ndarray, remainder_bound: bool = True) -> mp.mpf:
     """
     Approximate the logarithmic derivative of the L function at 1 - delta for negative delta
     Implementation of Lemma 6
@@ -45,20 +47,20 @@ def logarithmic_derivative(delta: int, K: int, chi_arr: np.ndarray, lambda_arr: 
     # Loop over all k from 1 to K
     for k in range(1, K + 1):
         # Compute the general lambda value lambda_L
-        lambda_L = mp.mpf(lambda_arr[k] * mp.mpf(chi_arr[k]))
+        lambda_L = mp.mpf(lambda_arr[k]) * mp.mpf(chi_arr[k])
 
         # Add the contribution of the k-th term to the sum
         total -= lambda_L / mp.power(k, 1- delta)
 
     # Add the upper bound of remainder term contribution
-    if add_tail:
+    if remainder_bound:
         total += (mp.power(K, delta) / delta) * (2.85 * (2 * delta - 1) / mp.log(K) - 1)
 
     return total
 
 # =========================== BASE CASE VERIFICATION ===========================
 
-def base_case_verify(d: int, K: int, eta: float, eps: float, lcalc_path: str | Path, log_path: str | Path, chunk: int=10) -> Tuple[bool, int]:
+def base_case_verify(d: int, K: int, eta: float, eps: float, lcalc_path: str | Path, data_dir: str | Path, log_path: str | Path, chunk: int=10) -> Tuple[bool, int]:
     """
     Verify the inequality for discriminant d
     Return (success, N_used)
@@ -71,17 +73,21 @@ def base_case_verify(d: int, K: int, eta: float, eps: float, lcalc_path: str | P
 
     # Compute the RHS constant based on the discriminant sign
     if d < 0:
-        rhs = mp.mpf("0.5") * mp.log(abs(d) * E**2) / (4 * PI * E**EULER)
+        rhs_const = mp.mpf("0.5") * mp.log(abs(d) * E**2) / (4 * PI * E**EULER)
     else:
-        rhs = mp.mpf("0.5") * mp.log(abs(d) / PI * E**EULER)
+        rhs_const = mp.mpf("0.5") * mp.log(abs(d) / PI * E**EULER)
 
     # Add the approximation of logarithmic derivative contribution to the RHS
-    rhs += logarithmic_derivative(-1, K, chi_arr, lambda_arr, add_tail=True)
+    rhs = rhs_const + logarithmic_derivative(-1, K, chi_arr, lambda_arr, remainder_bound=True)
 
     # ----------------------- LHS -----------------------
 
     # Initialize the LHS with the iota(eta) of the missing zeros guard
     lhs = 2 * iota(mp.mpf(eta))
+
+    # Track the zeros and intervals used to save to file later
+    zeros_acc: List[mp.mpf] = []
+    intervals_acc: List[tuple[mp.mpf, mp.mpf]] = []
 
     # Contribution of the zeros
     N_used = 0
@@ -91,15 +97,20 @@ def base_case_verify(d: int, K: int, eta: float, eps: float, lcalc_path: str | P
         while True:
             # Load a chunk of new intervals 
             need = start + chunk 
-            intervals = compute_intervals(d, need, eps, lcalc_path)
+            zeros = compute_zeros(d, need, lcalc_path)
+            intervals = compute_intervals(d, need, eps, lcalc_path, zeros=zeros)
 
             if len(intervals) <= start:
                 break   # Exhausted zero list
 
             intervals = intervals[start:]
-            for gamma_minus, gamma_plus in map(tuple, intervals[start:]):
+            for index, (gamma_minus, gamma_plus) in enumerate(intervals[start:]):
                 gamma_minus = mp.mpf(gamma_minus)
                 gamma_plus  = mp.mpf(gamma_plus)
+
+                # Record the zeros and intervals used
+                zeros_acc.append(mp.mpf(zeros[start + index]))
+                intervals_acc.append((gamma_minus, gamma_plus))
 
                 # Separate the contribution of the zeros by type
                 if mp.almosteq(gamma_minus + gamma_plus, 0, rel_eps=0, abs_eps=1e-12):
@@ -131,4 +142,13 @@ def base_case_verify(d: int, K: int, eta: float, eps: float, lcalc_path: str | P
             log.write(f"Error: d = {d}, N = {N_used}, reason = {repr(err)}\n")
         success = False
     
+    # Save zeros, intervals, lambda, and kronecker values used to .txt files
+    data_dir = Path(data_dir).expanduser().resolve()
+    data_dir.mkdir(parents=True, exist_ok=True)
+
+    write_zeros(d, [float(z) for z in zeros_acc], data_dir)
+    write_intervals(d, np.asarray(intervals_acc, dtype=float), data_dir)
+    write_lambda(K, lambda_arr, data_dir)
+    write_kronecker(d, K, chi_arr, data_dir)
+
     return success, N_used
