@@ -1,82 +1,140 @@
-# Generalized Riemann Hypothesis Verification
+# Generalized Riemann Hypothesis Verification for Quadratic Dirichlet L-Functions
 
-A lightweight numerical tool-chain for verifying the Generalized Riemann Hypothesis for quadratic Dirichlet L-functions
+A Python toolkit for verifying instances of the Generalized Riemann Hypothesis (GRH) for quadratic Dirichlet L-functions. It calculates Kronecker symbols and von Mangoldt values, fetches zeros using `lcalc`, and verifies the absence of zeros up to a specified height $\eta$.
 
 
-## 1. Building the C++ extension
+## Repository Structure
 
-```bash
-mkdir build && cd build
-cmake ..                           # need CMake >= 3.16
-make                               # build grhverify*.so
-cd ..
+```
+GRH-verification/
+├─ grhverify/
+│   ├─ __init__.py
+│   ├─ base_case.py
+│   ├─ utils/
+│   │   ├─ discriminants.py
+│   │   ├─ generate_zeros.py
+│   │   ├─ kronecker_symbol.py
+│   │   └─ von_mangoldt.py
+│   └─ … (planned future modules)
+│
+├─ driver.py               # Command-line interface entry point
+├─ local_config.json       # e.g., {"lcalc_path": "/path/to/lcalc"}
+├─ README.md               # Project description file
+├─ pyproject.toml          # Package metadata for editable installs
+└─ tests/
+    └─ (unit tests in development)
 ```
 
-## 2. Telling the pipeline where **lcalc** lives
 
-```jsonc
-// local_config.json   (repo root)
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/uyen-nguyen-190304/GRH-verification.git
+
+# Navigate into the repository directory
+cd GRH-verification
+
+# Install the package in editable mode
+pip install -e .                                  
+
+# Activate SageMath environment
+conda activate sage                                  
+```
+
+
+## Configuration
+
+Create a `local_config.json` in the project root with similar structure to the provided `example_config.json`:
+
+```json
 {
-  "lcalc_path": "/usr/bin/lcalc"   // edit if lcalc lives elsewhere
+  "lcalc_path": "/full/path/to/lcalc"
 }
 ```
 
-## 3. Running the verification pipeline
+This specifies the location of the `lcalc` executable.
 
-The entry point to the verification pipeline is `script/pipeline.py`. To run the verification pipeline, provide either:
 
-* exactly one discriminant (`-d/--discriminant`), or
-* an inclusive range (`--d-min` and `--d-max`)
+## Command-Line Parameters
 
-The two options are mutually exclusive. If both options are provided at once, the script will abort with the message:
+Run `python driver.py --help` for detailed usage. Key parameters include:
 
-```bash
-Error: Cannot provide both --discriminant and --d-min/d-max
-```
+| Option                     | Arg     | Default             | Description                                                         |
+| -------------------------- | ------- | ------------------- | ------------------------------------------------------------------- |
+| `-d`, `--discriminant`     | *int*   | —                   | Single discriminant to verify. Exclusive with `--d-min/max`        |
+| `--d-min`                  | *int*   | —                   | Minimum discriminant (inclusive)                                   |
+| `--d-max`                  | *int*   | —                   | Maximum discriminant (inclusive)                                   |
+| `-eta`, `--height`         | *float* | auto                | Height η; defaults to (first positive zero + 2 $\varepsilon$) if unspecified    |
+| `-k`, `--power`            | *int*   | `1`                 | Order of logarithmic derivative $L^{(k)}/L$ (currently only `1`) |
+| `-K`, `--upper-limit`      | *int*   | `100000`            | Truncation limit $K$ for $\chi$ and $\Lambda$ arrays                          |
+| `-eps`, `--epsilon`        | *float* | `1e-6`              | Half-width $\varepsilon$ for zero intervals $[\gamma - \varepsilon, \gamma + \varepsilon]$                    |
+| `-config`, `--config-file` | *path*  | `local_config.json` | JSON config file path                                              |
+| `-data`, `--data-dir`      | *path*  | `data`              | Directory for cached zeros, intervals, and $\chi, \Lambda$ data                |
+| `-output`, `--output-dir`  | *path*  | `results`           | Output directory for results and error logs                              |
 
-### A. Single discriminant
 
-```bash
-python -m script.pipeline -d 1299721
-```
+## Quickstart Examples
 
-### B. Custom range of discriminants
-
-```bash
-python -m script.pipeline --d-min -1000 --d-max 1000
-```
-
-One of the two options above must be provided. Then, for each fundamental $d$ in the set, the pipeline keeps adding zeros until the RH is verified and records the smallest number of zeros $N$ needed. Besides, there are some other optional flags that could be supplied to the pipeline if wanted:
-
-| Flag                       | Default                 | Meaning                                                                            |
-| -------------------------- | ----------------------- | ---------------------------------------------------------------------------------  |
-| `-eta`                     | *first zero*            | Verification height $\eta$.  If omitted, the ordinate of the first zero is used       |
-| `-K`, `--upper-limit`      | **$100000 = 10^5$**     | Length of the $\Lambda(k)$ and $\chi_d(k)$ arrays                                     |
-| `-eps`, `--epsilon`        | **$1 × 10^{-6}$**       | Half-width $\varepsilon$ of each symmetric interval $[\gamma - \varepsilon, \gamma + \varepsilon]$                             |
-| `-config`, `--config-file` | **`local_config.json`** | JSON containing `"lcalc_path": "/path/to/lcalc"`                                   |
-| `-data`, `--data-dir`      | **`data`**              | Root directory for caches ($\Lambda$, $\chi$, zeros)                                            |
-| `-output`, `--output-dir`  | **`results`**           | Destination for `summary.csv` & `errors.log`                                       |
-
-### Complete example
+### Verify a range of discriminants
 
 ```bash
-python -m script.pipeline --d-min -1000 --d-max 1000    \
-        -K 200000 --epsilon 5e-6 --eta 0.35             \
-        --config local_config.json                      \
-        --data-dir data --output-dir results
+python driver.py --d-min -500 --d-max 500 \
+  --eps 1e-6 --upper-limit 50000
 ```
- 
-## 4. Cleaning Up
 
-Remove build artefacts, Python byte-code, and generated caches:
+### Verify a single discriminant with explicit height
 
 ```bash
-# delete CMake build dir and compiled .so
-rm -rf build grhverify/*.so
-
-# delete __pycache__ folders
-find . -name '__pycache__' -type d -exec rm -r {} +
-
-# delete cached zeros / Λ / χ and previous results
-rm -rf data/ results/
+python driver.py -d 13 -eta 3.5
 ```
+
+
+## Output Files
+
+Output directories:
+
+* **`results/summary.csv`**
+  * CSV summary: `d, eta, N_needed`
+
+* **`results/errors.log`**
+  * Logs runtime errors or failures
+
+* **`data/von_mangoldt.txt`**
+  * von Mangoldt values $\Lambda$
+
+* **`data/positive_d/d_<d>/`**, **`data/negative_d/d_<d>/`**
+  * `zeros.txt`: zeros $\gamma$
+  * `intervals.txt`: intervals $[\gamma - \varepsilon, \gamma + \varepsilon]$
+  * `kronecker.txt`: Kronecker symbols $\chi$
+
+
+## Cleaning Up
+
+Remove generated files and cached data:
+
+```bash
+# Remove results and logs
+rm -rf results/
+
+# Clear cached data
+rm -rf data/
+
+# Remove Python caches
+find . \
+  -type d \( -name "__pycache__" -o -name ".pytest_cache" -o -name ".mypy_cache" \) \
+  -prune \
+  -exec rm -rf {} +
+
+# Remove build artifacts
+rm -rf build/ dist/ *.egg-info
+
+# Uninstall if previously installed in editable mode
+pip uninstall grhverify
+```
+
+
+## Future Development
+
+* Implement verification for higher-order logarithmic derivatives
+* Introduce unit testing for arithmetic functions
