@@ -1,63 +1,74 @@
 import pytest
+import subprocess
 import numpy as np
 import mpmath as mp
 
 from grhverify.base_case import logarithmic_derivative
+from grhverify.utils.discriminant import is_fundamental_discriminant
 from grhverify.utils.von_mangoldt import compute_lambda
 from grhverify.utils.kronecker_symbol import compute_kronecker
-from driver import is_fundamental_discriminant
 
-# =============================== CONSTANTS ===============================
+# ======================== WORKING CONSTANTS ========================
 
-mp.dps = 20             # Working precision 
-delta  = -1             # Evaluate the logarithmic derivative at delta = -1 -> s = 2
-K      = 100000         # Number of terms to compute the finite sum of the logarithmic derivative
-d      = 10009          # Fundamental discriminants
-tol    = mp.mpf("1e-5") # Current tolerance level              
+mp.dps    = 20         # Working precision
+K         = 100000     # Truncating limit for L'/L
+delta     = -1         # s = 2
+h = mp.mpf("1e-5")      
+tolerance = mp.mpf("1e-8")
 
-# List of fundamental discriminants to test
-d_list = [d for d in range(-100, 100) if is_fundamental_discriminant(d)]
+# ==================== HELPER: CALL MATHEMATICA =====================
 
-# ================================= HELPER =================================
+# Numerical differentiation to approximate L'/L
+def mathematica_log_derivative(d: int, delta: int, K: int, accuracy: int=20) -> float:
+    scheme = scheme.lower()
+    code = f"""
+    accuracy = {accuracy};
+    d = {d};
+    q = Abs[d];
+    K = {K};
+    h = {h};
+    s = {1 - delta};
 
-def _dirichlet_L_trunc(s: mp.mpf, K: int, chi: np.ndarray) -> mp.mpf:
-    """Truncated Dirichlet series"""
-    return mp.fsum(chi[k] / mp.power(k, s) for k in range(1, K + 1))
+    Lval = N[DirichletL[q, (q + 1)/2, s], accuracy];
+    Lval_plus = N[DirichletL[q, (q + 1)/2, s + h], accuracy];
+    Lval_minus= N[DirichletL[q, (q + 1)/2, s - h], accuracy];
 
+    centralFD = (Lval_plus - Lval_minus) / (2 h * Lval);
+    forwardFD = (Lval_plus - Lval) / (h * Lval);
 
-def _fd_log_derivative(delta: int, K: int, chi: np.ndarray, scheme: str = "central", h: mp.mpf = mp.mpf("1e-5")) -> mp.mpf:
+    centralFD := (logLplus - logLminus)/(2 h);
+    forwardFD := (logLplus - logL)/(h);
+
+    result = If["{scheme}" === "central", centralFD, forwardFD];
+    N[result, accuracy]
     """
-    Finite-difference estimate of L'(s)/L(s)
+    result = subprocess.run(
+        ["wolframscript", "-code", code],
+        capture_output=True, text=True, check=True
+    )
+    return float(result.stdout.strip())
 
-    scheme = "forward"  -> (log L(s + h) - log L(s)) / h
-    scheme = "central"  -> (log L(s + h) - log L(s - h)) / 2h
-    """
-    s = mp.mpf(1 - delta)          # δ < 0 ⇒ s > 1
-    if scheme == "forward":
-        return (mp.log(_dirichlet_L_trunc(s + h, K, chi)) - mp.log(_dirichlet_L_trunc(s, K, chi))) / h
-    if scheme == "central":
-        return (mp.log(_dirichlet_L_trunc(s + h, K, chi)) - mp.log(_dirichlet_L_trunc(s - h, K, chi))) / (2 * h)
-    raise ValueError("scheme must be 'forward' or 'central'")
+# ======================= CHOOSE SAMPLE d VALUES =======================
 
-# ================================= TESTS =================================
+# Can change high and low here; current test size = 50
+# Also, current not set seed -> dynamic d choices
+d_list = [d for d in np.random.randint(-100000, 100000, size=50) if is_fundamental_discriminant(d)]
+
+# ======================= TEST =======================
 
 @pytest.mark.parametrize("d", d_list)
-def test_log_derivative(d):
-    """Analytic value (minus tail) approx forward & central finite differences"""
+@pytest.mark.parametrize("scheme", ["central", "forward"])
+def test_python_vs_mathematica_fd(d, scheme):
     chi = compute_kronecker(d, K)
     lam = compute_lambda(K)
 
-    # Analytic term -> Lemma 6
-    analytic = logarithmic_derivative(delta, K, chi, lam, remainder_bound=False)
+    analytic_val = logarithmic_derivative(delta, K, chi, lam, remainder_bound=False)
+    numerical_diff_val = mathematica_log_derivative(d, float(delta), K, h)
 
-    # Finite difference estimate
-    fd_forward = _fd_log_derivative(delta, K, chi, scheme="forward")
-    fd_central = _fd_log_derivative(delta, K, chi, scheme="central")
-
-    # Test for value match-up
-    assert abs(analytic - fd_central) < fd_central, (
-        f"d={d}: central FD diff = {abs(analytic - fd_central)} exceeds the tolerance {fd_central}"
-    )
-    assert abs(analytic - fd_forward) < fd_forward, (
-        f"d={d}: forward FD diff = {abs(analytic - fd_forward)} exceeds the tolerance {fd_forward}"
+    diff = abs(analytic_val - numerical_diff_val)
+    assert diff < tolerance, (
+        f"Mismatch for d = {d}\n"
+        f"Python analytic: {analytic_val}\n"
+        f"Numerical Differentiation {scheme}: {numerical_diff_val}\n"
+        f"Diff: {diff}"
     )
