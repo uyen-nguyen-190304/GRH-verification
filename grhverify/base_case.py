@@ -153,7 +153,7 @@ def base_case_verify(d: int, K: int, eta: float, eps: float, lcalc_path: str | P
 
             # Process exactly the next 'chunk' intervals
             intervals = intervals[start:]
-            for index, (gamma_minus, gamma_plus) in enumerate(intervals[start:]):
+            for index, (gamma_minus, gamma_plus) in enumerate(intervals):
                 gamma_minus = mp.mpf(gamma_minus)
                 gamma_plus  = mp.mpf(gamma_plus)
 
